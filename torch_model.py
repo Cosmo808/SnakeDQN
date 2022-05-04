@@ -1,9 +1,9 @@
 import torch
-from torch._C import set_flush_denormal
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import os
+
 
 class Linear_QNet(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
@@ -15,9 +15,9 @@ class Linear_QNet(nn.Module):
         x = F.relu(self.linear1(x))
         x = self.linear2(x)
         return x
-    
-    def save(self,file_name='model.pth'):
-        model_folder_path = './model'
+
+    def save(self, file_name='model.pth'):
+        model_folder_path = './Model'
         if not os.path.exists(model_folder_path):
             os.makedirs(model_folder_path)
 
@@ -46,25 +46,18 @@ class QTrainer:
             next_state = torch.unsqueeze(next_state, 0)
             action = torch.unsqueeze(action, 0)
             reward = torch.unsqueeze(reward, 0)
-            done = (done, )
+            done = (done,)
 
-        # 1: predicted Q values with current state
-        pred = self.model(state)
+        predict = self.model(state)
+        target = predict.clone()
 
-        target = pred.clone()
         for idx in range(len(done)):
             Q_new = reward[idx]
             if not done[idx]:
                 Q_new = reward[idx] + self.gamma * torch.max(self.model(next_state[idx]))
-
             target[idx][torch.argmax(action).item()] = Q_new
-            
 
-        # 2: Q_new = r + y * max(next_predicted Q value) -> only do this if no done
-        # pred.clone()
-        # preds[argmax(action)] = Q_new
         self.optimizer.zero_grad()
-        loss = self.criterion(target, pred)
+        loss = self.criterion(target, predict)
         loss.backward()
-
         self.optimizer.step()
