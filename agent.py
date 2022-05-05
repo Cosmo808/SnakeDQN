@@ -1,11 +1,12 @@
 import torch
 import random
-import numpy as np
 from collections import deque
 from game import SnakeGameAI, Direction, Point
 from torch_model import Linear_QNet, QTrainer
-from helper import plot
+from Plot import plot
 import matplotlib.pyplot as plt
+import time
+import os
 
 
 MAX_MEMORY = 10000
@@ -20,16 +21,28 @@ class Agent:
         self.epsilon = 0  # randomness
         self.gamma = 0.9  # discount rate
         self.memory = deque(maxlen=MAX_MEMORY)  # popleft()
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if torch.cuda.is_available():
+            print('\nGPU Accelerating...\n')
+        else:
+            print('\nUsing CPU...\n')
+        self.model = Linear_QNet(11, 256, 3, self.device).to(self.device)  # input_size: 11, output: 3
+        self._load_dnn()
+        self.trainer = QTrainer(self.model, LR, self.gamma, self.device)
 
-        self.model = Linear_QNet(11, 256, 3)  # input_size: 11, output: 3
-        self.model.load_state_dict(torch.load('./Model/model.pth'))
-        self.trainer = QTrainer(self.model, lr=LR, gamma=self.gamma)
-
-        # self.dnn = DNN(state_size=11, action_size=3, lr=1e-2, gamma=0.9)
-        # self.learn_step_counter = 0
-        # self.memory_counter = 0
-        # self.memory = np.zeros((MAX_MEMORY, self.dnn.state_size * 2 + 3))
-        # self.replace_target_iter = 50
+    def _load_dnn(self):
+        model_dir = './Model'
+        record = 0
+        for root, dirs, files in os.walk(model_dir):
+            if not files:
+                return
+            for file in files:
+                score = int(file.split('.')[0])
+                if score > record:
+                    record = score
+        model_name = './Model/' + str(record) + '.pth'
+        self.model.load_state_dict(torch.load(model_name))
+        print('Loading Model: {:s} ...\n'.format(str(record) + '.pth'))
 
     @staticmethod
     def get_state(game):
@@ -76,15 +89,10 @@ class Agent:
             game.food.y < game.head.y,  # food down
         ]
 
-        return np.array(state, dtype=int)
+        return state
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))  # popleft if MAX_MEMORY is reached
-        # action = np.argmax(action)
-        # transition = np.hstack((state, action, reward, next_state, done))
-        # index = self.memory_counter % MAX_MEMORY
-        # self.memory[index, :] = transition
-        # self.memory_counter += 1
 
     def train_long_memory(self):
         if len(self.memory) > BATCH_SIZE:
@@ -95,44 +103,8 @@ class Agent:
         states, actions, rewards, next_states, dones = zip(*mini_sample)
         self.trainer.train_step(states, actions, rewards, next_states, dones)
 
-        # if self.learn_step_counter % self.replace_target_iter == 0:
-        #     self.dnn.target_replace_op()
-        #     print('\ntarget_params_replaced\n')
-        #
-        # if self.memory_counter > MAX_MEMORY:
-        #     sample_index = np.random.choice(MAX_MEMORY, size = BATCH_SIZE)
-        # else:
-        #     sample_index = np.random.choice(self.memory_counter, size = BATCH_SIZE)
-        # batch_memory = self.memory[sample_index, :]
-        # q_next = self.dnn.model_targ.predict(
-        #     batch_memory[:, -self.dnn.state_size - 1:-1])  # use next state to predict next Q
-        # q_eval = self.dnn.model_eval.predict(batch_memory[:, :self.dnn.state_size])  # use state to predict evaluation Q
-        # q_targ = q_eval.copy()
-        #
-        # batch_index = np.arange(BATCH_SIZE, dtype = np.int32)
-        # eval_action_index = batch_memory[:, self.dnn.state_size].astype(int)
-        # reward = batch_memory[:, self.dnn.state_size + 1]
-        # q_targ[batch_index, eval_action_index] = reward + self.gamma * np.max(q_next, axis = 1)
-        #
-        # self.dnn.model_eval.fit(
-        #     x = batch_memory[:, :self.dnn.state_size], y = q_targ, epochs = 10, verbose=0
-        # )
-        # self.learn_step_counter += 1
-
     def train_short_memory(self, state, action, reward, next_state, done):
         self.trainer.train_step(state, action, reward, next_state, done)
-        # action = np.argmax(action)
-        # state = tf.expand_dims(state, axis = 0)
-        # next_state = tf.expand_dims(next_state, axis = 0)
-        # q_next = self.dnn.model_targ.predict(next_state)
-        # q_eval = self.dnn.model_targ.predict(state)
-        # q_targ = q_eval.copy()
-        # q_targ[0, action] = reward + self.gamma * np.max(q_next, axis = 1)
-        #
-        # self.dnn.model_eval.fit(
-        #     x = state, y = q_targ, epochs = 3, verbose=0
-        # )
-        # self.learn_step_counter += 1
 
     def get_action(self, state):
         # random moves : tradeoff exploration / exploitation
@@ -149,21 +121,6 @@ class Agent:
 
         return final_move
 
-        # action = np.zeros(3)
-        # state = np.array(state)
-        # state = tf.expand_dims(state, axis = 0)
-        # self.epsilon = (200 - self.n_games) / 300
-        # if self.n_games > 170:
-        #     self.epsilon = 0.1
-        # if random.random() > self.epsilon:
-        #     action_value = self.dnn.model_targ.predict(state)
-        #     ind = np.argmax(action_value)  # [0, 2]
-        #     action[ind] = 1
-        # else:
-        #     ind = random.randint(0, 2)
-        #     action[ind] = 1
-        # return action
-
 
 def train():
     plot_scores = []
@@ -173,6 +130,7 @@ def train():
     agent = Agent()
     game = SnakeGameAI()
     plt.ion()
+    t = time.time()
     while True:
         # get old state
         state_old = agent.get_state(game)
@@ -198,9 +156,12 @@ def train():
 
             if score > record:
                 record = score
-                agent.model.save()
+                agent.model.save(file_name=str(record)+'.pth')
 
             print('Game', agent.n_games, 'Score', score, 'Record:', record)
+
+            if agent.n_games % 50 == 0:
+                print('\nEpoch {:d}: {:.0f} seconds\n'.format(agent.n_games, time.time() - t))
 
             plot_scores.append(score)
             total_score += score
