@@ -5,7 +5,7 @@ from collections import namedtuple
 import numpy as np
 
 pygame.init()
-font = pygame.font.Font('arial.ttf', 25)
+font = pygame.font.Font('./Font/arial.ttf', 25)
 Point = namedtuple('Point', 'x, y')
 
 # rgb colors
