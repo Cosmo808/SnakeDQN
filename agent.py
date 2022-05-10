@@ -10,26 +10,28 @@ import numpy as np
 MAX_MEMORY = 10000
 BATCH_SIZE = 1024
 LR = 0.001
+load_flag = False
 
 
 class Agent:
 
     def __init__(self):
         self.n_games = 0
-        self.epsilon = 0  # randomness
+        self.epsilon = 0.1  # randomness
         self.gamma = 0.9  # discount rate
         self.memory = deque(maxlen=MAX_MEMORY)  # popleft()
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cpu" if torch.cuda.is_available() else "cpu")
         if torch.cuda.is_available():
             print('\nGPU Accelerating...\n')
         else:
             print('\nUsing CPU...\n')
         self.model = Linear_QNet(11, 256, 3, self.device).to(self.device)  # input_size: 11, output: 3
-        self._load_dnn()
         self.trainer = QTrainer(self.model, LR, self.gamma, self.device)
-
         self.Q = np.zeros((2**11, 3))
-        self._load_Q()
+
+        if load_flag:
+            self._load_dnn()
+            self._load_Q()
 
     def _load_dnn(self):
         model_dir = './Model'
@@ -82,9 +84,10 @@ class Agent:
 
     def get_action(self, state):
         # random moves : tradeoff exploration / exploitation
-        self.epsilon = 80 - self.n_games
         final_move = [0, 0, 0]
-        if random.randint(0, 200) < self.epsilon:
+        if self.n_games > 80:
+            self.epsilon = 0
+        if random.random() < self.epsilon:
             move = random.randint(0, 2)
             final_move[move] = 1
         else:
@@ -96,12 +99,18 @@ class Agent:
 
     def ql_get_action(self, state):
         final_move = [0, 0, 0]
-        index = 0
-        for i, j in enumerate(state):
-            index += 2**i * j
-        move = self.Q[index]
-        action = np.argmax(move)
-        final_move[int(action)] = 1
+        if self.n_games > 40:
+            self.epsilon = 0
+        if random.random() < self.epsilon:
+            move = random.randint(0, 2)
+            final_move[move] = 1
+        else:
+            index = 0
+            for i, j in enumerate(state):
+                index += 2**i * j
+            move = self.Q[index]
+            action = np.argmax(move)
+            final_move[int(action)] = 1
         return final_move
 
     def Q_table_save(self, file_name):

@@ -1,5 +1,7 @@
 import matplotlib.pyplot as plt
 from IPython import display
+import os
+import numpy as np
 
 
 def plot(scores, mean_scores):
@@ -26,3 +28,10 @@ def s2idx(state):
             ii = 0
         index += 2 ** i * ii
     return index
+
+
+def save_np(dir_name, file_name, np_array):
+    if not os.path.exists(dir_name):
+        os.makedirs(dir_name)
+    file_name = os.path.join(dir_name, file_name)
+    np.save(file_name, np_array)

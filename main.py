@@ -1,8 +1,9 @@
-from utils import plot
+from utils import plot, save_np
 import matplotlib.pyplot as plt
 import time
 from game import SnakeGameAI
 from agent import Agent
+import numpy as np
 
 
 deep_flag = False
@@ -58,3 +59,8 @@ while True:
         mean_score = total_score / agent.n_games
         plot_mean_scores.append(mean_score)
         plot(plot_scores, plot_mean_scores)
+
+        if agent.n_games % 300 == 0:
+            save_np('./Scores', 'score.npy', np.array(plot_scores))
+            save_np('./Scores', 'mean.npy', np.array(plot_mean_scores))
+            print("Saving results...")
