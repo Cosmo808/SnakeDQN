@@ -2,45 +2,51 @@ import torch
 import random
 from collections import deque
 from game import Direction, Point
-from torch_model import Linear_QNet, QTrainer
+from dqn_model import Linear_QNet, QTrainer
 import os
 import numpy as np
+from ql_model import QLTrainer
 from utils import s2idx
 
 
 MAX_MEMORY = 10000
 BATCH_SIZE = 1024
-LR = 0.001
-load_flag = False
 
 
 class Agent:
 
-    def __init__(self):
+    def __init__(self, load):
+        # hyper parameters
         self.n_games = 0
-        self.epsilon = 0.1  # randomness
-        self.alpha = 0.6
-        self.gamma = 0.9  # discount rate
+        self.epsilon = 0.1
+        self.alpha = 1.0
+        self.gamma = 0.7
+        self.lr = 0.001
+
+        # cuda or cpu
         self.memory = deque(maxlen=MAX_MEMORY)  # popleft()
         self.device = torch.device("cpu" if torch.cuda.is_available() else "cpu")
         if torch.cuda.is_available():
             print('\nGPU Accelerating...\n')
         else:
             print('\nUsing CPU...\n')
-        self.model = Linear_QNet(11, 256, 3, self.device).to(self.device)  # input_size: 11, output: 3
-        self.trainer = QTrainer(self.model, LR, self.alpha, self.gamma, self.device)
-        self.Q = np.zeros((2**11, 3))
 
-        if load_flag:
+        # dqn model
+        self.model = Linear_QNet(11, 256, 3, self.device).to(self.device)  # input_size: 11, output: 3
+        self.trainer = QTrainer(self.model, self.lr, self.alpha, self.gamma, self.device)
+
+        # q-learning model
+        self.ql = QLTrainer(self.alpha, self.gamma)
+        self.Q = np.zeros((2 ** 11, 3))
+
+        # load model
+        if load:
             self._load_dnn()
             self._load_Q()
 
-    def remember(self, state, action, reward, next_state, done):
-        self.memory.append((state, action, reward, next_state, done))  # popleft if MAX_MEMORY is reached
-
     def train_long_memory(self, deep_flag):
         if len(self.memory) > BATCH_SIZE:
-            mini_sample = random.sample(self.memory, BATCH_SIZE)  # list of tuples
+            mini_sample = random.sample(self.memory, BATCH_SIZE)
         else:
             mini_sample = self.memory
 
@@ -48,16 +54,15 @@ class Agent:
         if deep_flag:
             self.trainer.train_step(states, actions, rewards, next_states, dones)
         else:
-            self.trainer.ql_train(states, actions, rewards, next_states, dones, self.Q)
+            self.Q = self.ql.ql_train(states, actions, rewards, next_states, dones, self.Q)
 
     def train_short_memory(self, state, action, reward, next_state, done, deep_flag):
         if deep_flag:
             self.trainer.train_step(state, action, reward, next_state, done)
         else:
-            self.trainer.ql_train(state, action, reward, next_state, done, self.Q)
+            self.Q = self.ql.ql_train(state, action, reward, next_state, done, self.Q)
 
     def get_action(self, state):
-        # random moves : tradeoff exploration / exploitation
         final_move = [0, 0, 0]
         if self.n_games > 80:
             self.epsilon = 0
@@ -121,6 +126,9 @@ class Agent:
         Q_table_name = './Q_table/' + str(record) + '.npy'
         self.Q = np.load(Q_table_name)
         print('Loading Q Table: {:s} ...\n'.format(str(record) + '.npy'))
+
+    def remember(self, state, action, reward, next_state, done):
+        self.memory.append((state, action, reward, next_state, done))
 
     @staticmethod
     def get_state(game):

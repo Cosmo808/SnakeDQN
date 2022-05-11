@@ -7,11 +7,12 @@ import numpy as np
 
 
 deep_flag = True
+load_flag = False
 plot_scores = []
 plot_mean_scores = []
 total_score = 0
 record = 0
-agent = Agent()
+agent = Agent(load_flag)
 game = SnakeGameAI()
 plt.ion()
 t = time.time()
