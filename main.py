@@ -6,7 +6,7 @@ from agent import Agent
 import numpy as np
 
 
-deep_flag = False
+deep_flag = True
 plot_scores = []
 plot_mean_scores = []
 total_score = 0
@@ -51,7 +51,7 @@ while True:
 
         print('Game', agent.n_games, 'Score', score, 'Record:', record)
 
-        if agent.n_games % 50 == 0:
+        if agent.n_games % 100 == 0:
             print('\nEpoch {:d}: {:.0f} seconds\n'.format(agent.n_games, time.time() - t))
 
         plot_scores.append(score)
@@ -63,4 +63,4 @@ while True:
         if agent.n_games % 300 == 0:
             save_np('./Scores', 'score.npy', np.array(plot_scores))
             save_np('./Scores', 'mean.npy', np.array(plot_mean_scores))
-            print("Saving results...")
+            print("\nSaving results...\n")

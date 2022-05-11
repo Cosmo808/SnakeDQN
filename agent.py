@@ -5,6 +5,7 @@ from game import Direction, Point
 from torch_model import Linear_QNet, QTrainer
 import os
 import numpy as np
+from utils import s2idx
 
 
 MAX_MEMORY = 10000
@@ -18,6 +19,7 @@ class Agent:
     def __init__(self):
         self.n_games = 0
         self.epsilon = 0.1  # randomness
+        self.alpha = 0.6
         self.gamma = 0.9  # discount rate
         self.memory = deque(maxlen=MAX_MEMORY)  # popleft()
         self.device = torch.device("cpu" if torch.cuda.is_available() else "cpu")
@@ -26,40 +28,12 @@ class Agent:
         else:
             print('\nUsing CPU...\n')
         self.model = Linear_QNet(11, 256, 3, self.device).to(self.device)  # input_size: 11, output: 3
-        self.trainer = QTrainer(self.model, LR, self.gamma, self.device)
+        self.trainer = QTrainer(self.model, LR, self.alpha, self.gamma, self.device)
         self.Q = np.zeros((2**11, 3))
 
         if load_flag:
             self._load_dnn()
             self._load_Q()
-
-    def _load_dnn(self):
-        model_dir = './Model'
-        record = 0
-        for root, dirs, files in os.walk(model_dir):
-            if not files:
-                return
-            for file in files:
-                score = int(file.split('.')[0])
-                if score > record:
-                    record = score
-        model_name = './Model/' + str(record) + '.pth'
-        self.model.load_state_dict(torch.load(model_name))
-        print('Loading Model: {:s} ...\n'.format(str(record) + '.pth'))
-
-    def _load_Q(self):
-        Q_table_dir = './Q_table'
-        record = 0
-        for root, dirs, files in os.walk(Q_table_dir):
-            if not files:
-                return
-            for file in files:
-                score = int(file.split('.')[0])
-                if score > record:
-                    record = score
-        Q_table_name = './Q_table/' + str(record) + '.npy'
-        self.Q = np.load(Q_table_name)
-        print('Loading Q Table: {:s} ...\n'.format(str(record) + '.npy'))
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))  # popleft if MAX_MEMORY is reached
@@ -99,15 +73,15 @@ class Agent:
 
     def ql_get_action(self, state):
         final_move = [0, 0, 0]
-        if self.n_games > 40:
-            self.epsilon = 0
+        if self.n_games < 40:
+            self.epsilon = 0.005
+        else:
+            self.epsilon = 0.001
         if random.random() < self.epsilon:
             move = random.randint(0, 2)
             final_move[move] = 1
         else:
-            index = 0
-            for i, j in enumerate(state):
-                index += 2**i * j
+            index = s2idx(state)
             move = self.Q[index]
             action = np.argmax(move)
             final_move[int(action)] = 1
@@ -119,6 +93,34 @@ class Agent:
             os.makedirs(Q_table_path)
         file_name = os.path.join(Q_table_path, file_name)
         np.save(file_name, self.Q)
+
+    def _load_dnn(self):
+        model_dir = './Model'
+        record = 0
+        for root, dirs, files in os.walk(model_dir):
+            if not files:
+                return
+            for file in files:
+                score = int(file.split('.')[0])
+                if score > record:
+                    record = score
+        model_name = './Model/' + str(record) + '.pth'
+        self.model.load_state_dict(torch.load(model_name))
+        print('Loading Model: {:s} ...\n'.format(str(record) + '.pth'))
+
+    def _load_Q(self):
+        Q_table_dir = './Q_table'
+        record = 0
+        for root, dirs, files in os.walk(Q_table_dir):
+            if not files:
+                return
+            for file in files:
+                score = int(file.split('.')[0])
+                if score > record:
+                    record = score
+        Q_table_name = './Q_table/' + str(record) + '.npy'
+        self.Q = np.load(Q_table_name)
+        print('Loading Q Table: {:s} ...\n'.format(str(record) + '.npy'))
 
     @staticmethod
     def get_state(game):
