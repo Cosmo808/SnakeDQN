@@ -2,11 +2,12 @@ import torch
 import random
 from collections import deque
 from game import Direction, Point
-from dqn_model import Linear_QNet, QTrainer
+from utils import s2idx
 import os
 import numpy as np
 from ql_model import QLTrainer
-from utils import s2idx
+from dqn_model import Linear_QNet, QTrainer
+from nature_dqn_model import Qnet, target_Qnet, NTrainer
 
 
 MAX_MEMORY = 10000
@@ -22,22 +23,27 @@ class Agent:
         self.alpha = 1.0
         self.gamma = 0.7
         self.lr = 0.001
+        self.memory = deque(maxlen=MAX_MEMORY)
 
         # cuda or cpu
-        self.memory = deque(maxlen=MAX_MEMORY)  # popleft()
         self.device = torch.device("cpu" if torch.cuda.is_available() else "cpu")
         if torch.cuda.is_available():
             print('\nGPU Accelerating...\n')
         else:
             print('\nUsing CPU...\n')
 
-        # dqn model
-        self.model = Linear_QNet(11, 256, 3, self.device).to(self.device)  # input_size: 11, output: 3
-        self.trainer = QTrainer(self.model, self.lr, self.alpha, self.gamma, self.device)
-
         # q-learning model
         self.ql = QLTrainer(self.alpha, self.gamma)
         self.Q = np.zeros((2 ** 11, 3))
+
+        # dqn model
+        self.dqn_model = Linear_QNet(11, 256, 3, self.device).to(self.device)
+        self.dqn_trainer = QTrainer(self.dqn_model, self.lr, self.alpha, self.gamma, self.device)
+
+        # nature dqn
+        self.qnet = Qnet(11, 256, 3, self.device).to(self.device)
+        self.target_qnt = target_Qnet(11, 256, 3, self.device).to(self.device)
+        self.n_trainer = NTrainer(self.qnet, self.target_qnt, self.lr, self.alpha, self.gamma, self.device)
 
         # load model
         if load:
@@ -52,13 +58,13 @@ class Agent:
 
         states, actions, rewards, next_states, dones = zip(*mini_sample)
         if deep_flag:
-            self.trainer.train_step(states, actions, rewards, next_states, dones)
+            self.n_trainer.train_step(states, actions, rewards, next_states, dones)
         else:
             self.Q = self.ql.ql_train(states, actions, rewards, next_states, dones, self.Q)
 
     def train_short_memory(self, state, action, reward, next_state, done, deep_flag):
         if deep_flag:
-            self.trainer.train_step(state, action, reward, next_state, done)
+            self.n_trainer.train_step(state, action, reward, next_state, done)
         else:
             self.Q = self.ql.ql_train(state, action, reward, next_state, done, self.Q)
 
@@ -71,7 +77,7 @@ class Agent:
             final_move[move] = 1
         else:
             state0 = torch.tensor(state, dtype=torch.float)
-            prediction = self.model(state0)
+            prediction = self.dqn_model(state0)
             move = torch.argmax(prediction).item()
             final_move[move] = 1
         return final_move
@@ -110,7 +116,7 @@ class Agent:
                 if score > record:
                     record = score
         model_name = './Model/' + str(record) + '.pth'
-        self.model.load_state_dict(torch.load(model_name))
+        self.dqn_model.load_state_dict(torch.load(model_name))
         print('Loading Model: {:s} ...\n'.format(str(record) + '.pth'))
 
     def _load_Q(self):

@@ -46,7 +46,7 @@ while True:
         if score > record:
             record = score
             if deep_flag:
-                agent.model.save(file_name=str(record)+'.pth')
+                agent.dqn_model.save(file_name=str(record)+'.pth')
             else:
                 agent.Q_table_save(file_name=str(record)+'.npy')
 

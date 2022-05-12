@@ -6,7 +6,7 @@ import torch.nn.functional as F
 import os
 
 
-class Linear_QNet(nn.Module):
+class Qnet(nn.Module):
     def __init__(self, input_size, hidden_size, output_size, device):
         super().__init__()
         self.linear1 = nn.Linear(input_size, hidden_size)
@@ -27,15 +27,31 @@ class Linear_QNet(nn.Module):
         torch.save(self.state_dict(), file_name)
 
 
-class QTrainer:
-    def __init__(self, model, lr, alpha, gamma, device):
+class target_Qnet(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size, device):
+        super().__init__()
+        self.linear1 = nn.Linear(input_size, hidden_size)
+        self.linear2 = nn.Linear(hidden_size, output_size)
+        self.device = device
+
+    def forward(self, x):
+        x = x.to(self.device)
+        x = F.relu(self.linear1(x))
+        x = self.linear2(x)
+        return x
+
+
+class NTrainer:
+    def __init__(self, qnet, target_qnet, lr, alpha, gamma, device):
         self.lr = lr
         self.alpha = alpha
         self.gamma = gamma
-        self.model = model
-        self.optimizer = optim.Adam(model.parameters(), lr=self.lr)
+        self.qnet = qnet
+        self.target_qnet = target_qnet
+        self.optimizer = optim.Adam(qnet.parameters(), lr=self.lr)
         self.criterion = nn.MSELoss()
         self.device = device
+        self.target_set_iterations = 0
 
     def train_step(self, state, action, reward, next_state, done):
         state = torch.tensor(np.array(state), device=self.device, dtype=torch.float)
@@ -52,13 +68,13 @@ class QTrainer:
             reward = torch.unsqueeze(reward, 0)
             done = (done,)
 
-        predict = self.model(state)
+        predict = self.qnet(state)
         target = predict.clone()
 
         for idx in range(len(done)):
             Q_new = reward[idx]
             if not done[idx]:
-                Q_new = reward[idx] + self.gamma * torch.max(self.model(next_state[idx]))
+                Q_new = reward[idx] + self.gamma * torch.max(self.target_qnet(next_state[idx]))
             Q_old = target[idx][torch.argmax(action[idx]).item()]
             target[idx][torch.argmax(action[idx]).item()] = Q_old + self.alpha * (Q_new - Q_old)
 
@@ -66,3 +82,9 @@ class QTrainer:
         loss = self.criterion(target, predict)
         loss.backward()
         self.optimizer.step()
+
+        self.target_set_iterations += len(done)
+        if self.target_set_iterations >= 100:
+            self.target_set_iterations = 0
+            self.target_qnet.load_state_dict(self.qnet.state_dict())
+            print("\nSet Target Qnet...\n")
