@@ -41,7 +41,7 @@ class target_Qnet(nn.Module):
         return x
 
 
-class NTrainer:
+class Nature_Trainer:
     def __init__(self, qnet, target_qnet, lr, alpha, gamma, device):
         self.lr = lr
         self.alpha = alpha
@@ -83,8 +83,7 @@ class NTrainer:
         loss.backward()
         self.optimizer.step()
 
-        self.target_set_iterations += len(done)
-        if self.target_set_iterations >= 100:
+        self.target_set_iterations += 1
+        if self.target_set_iterations >= 0:
             self.target_set_iterations = 0
             self.target_qnet.load_state_dict(self.qnet.state_dict())
-            print("\nSet Target Qnet...\n")

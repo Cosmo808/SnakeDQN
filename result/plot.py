@@ -21,49 +21,29 @@ def smooth_curve(points, factor=0.93):
     return smoothed_points
 
 
-# load data
-dqn_mean = []
-dqn_score = []
-ql_mean = []
-ql_score = []
-for root, dirs, files in os.walk('./'):
-    for file in files:
-        if 'dqn' in root:
-            if file == 'mean.npy':
-                dqn_mean = np.load(os.path.join(root, file))
-            elif file == 'score.npy':
-                dqn_score = np.load(os.path.join(root, file))
-        elif 'ql' in root:
-            if file == 'mean.npy':
-                ql_mean = np.load(os.path.join(root, file))
-            elif file == 'score.npy':
-                ql_score = np.load(os.path.join(root, file))
-# data preprocess
-ql_mean = ql_mean[:1500]
-ql_score = ql_score[:1500]
-dqn_score = smooth_curve(dqn_score)
-ql_score = smooth_curve(ql_score)
-
-
-dqn_var_mean = {}
-dqn_var_score = {}
-for root, dirs, files in os.walk('./dqn'):
-    if files:
-        for file in files:
-            dirt = root
-            alpha = dirt[12:15]
-            gamma = dirt[-3:]
-            if file == 'mean.npy':
-                mean = np.load(os.path.join(root, file))
-                mean = smooth_curve(mean)
-                dqn_var_mean['alpha={:s} gamma={:s}'.format(alpha, gamma)] = mean
-            elif file == 'score.npy':
-                score = np.load(os.path.join(root, file))
-                score = smooth_curve(score)
-                dqn_var_score['alpha={:s} gamma={:s}'.format(alpha, gamma)] = score
-
-
 def ql_dqn_plot():
+    # load data
+    dqn_mean = []
+    dqn_score = []
+    ql_mean = []
+    ql_score = []
+    for root, dirs, files in os.walk('./'):
+        for file in files:
+            if 'dqn' in root:
+                if file == 'mean.npy':
+                    dqn_mean = np.load(os.path.join(root, file))
+                elif file == 'score.npy':
+                    dqn_score = np.load(os.path.join(root, file))
+            elif 'ql' in root:
+                if file == 'mean.npy':
+                    ql_mean = np.load(os.path.join(root, file))
+                elif file == 'score.npy':
+                    ql_score = np.load(os.path.join(root, file))
+
+    # data smooth
+    dqn_score = smooth_curve(dqn_score)
+    ql_score = smooth_curve(ql_score)
+
     # plot mean value
     plt.figure(1)
     plt.title('DQN & QLearning')
@@ -90,6 +70,22 @@ def ql_dqn_plot():
 
 
 def dqn_var_plot():
+    dqn_var_mean = {}
+    dqn_var_score = {}
+    for root, dirs, files in os.walk('./dqn'):
+        if files:
+            for file in files:
+                dirt = root
+                alpha = dirt[12:15]
+                gamma = dirt[-3:]
+                if file == 'mean.npy':
+                    mean = np.load(os.path.join(root, file))
+                    dqn_var_mean['alpha={:s} gamma={:s}'.format(alpha, gamma)] = mean
+                elif file == 'score.npy':
+                    score = np.load(os.path.join(root, file))
+                    score = smooth_curve(score)
+                    dqn_var_score['alpha={:s} gamma={:s}'.format(alpha, gamma)] = score
+
     alpha_sheet = [0.2, 0.4, 0.6, 0.8, 1.0, 1.0]
     gamma_sheet = [0.9, 0.9, 0.9, 0.9, 0.7, 0.9]
 
@@ -121,5 +117,45 @@ def dqn_var_plot():
     plt.show()
 
 
+def nature_plot():
+    nature_mean = {}
+    nature_score = {}
+    iterations = []
+    for root, dirs, files in os.walk('./nature'):
+        if files:
+            for file in files:
+                index = root[-3:]
+                if not iterations or index != iterations[-1]:
+                    iterations.append(index)
+                if file == 'mean.npy':
+                    mean = np.load(os.path.join(root, file))
+                    nature_mean[index] = mean
+                elif file == 'score.npy':
+                    score = np.load(os.path.join(root, file))
+                    score = smooth_curve(score)
+                    nature_score[index] = score
+
+    plt.figure(1)
+    plt.title('DQN Variable')
+    plt.xlabel('Epochs')
+    plt.ylabel('Mean Value')
+    for i in iterations:
+        plt.plot(nature_mean[i])
+    plt.legend(iterations)
+    plt.ylim(ymin=0)
+    plt.xlim(xmin=0, xmax=1500)
+
+    plt.figure(2)
+    plt.title('DQN Variable')
+    plt.xlabel('Epochs')
+    plt.ylabel('Scores')
+    for i in iterations:
+        plt.plot(nature_score[str(i)])
+    plt.legend(iterations)
+    plt.ylim(ymin=0)
+    plt.xlim(xmin=0, xmax=1500)
+    plt.show()
+
+
 if __name__ == '__main__':
-    dqn_var_plot()
+    nature_plot()

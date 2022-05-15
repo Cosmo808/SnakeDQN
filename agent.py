@@ -7,7 +7,8 @@ import os
 import numpy as np
 from ql_model import QLTrainer
 from dqn_model import Linear_QNet, QTrainer
-from nature_dqn_model import Qnet, target_Qnet, NTrainer
+from nature_model import Qnet, target_Qnet, Nature_Trainer
+from double_dqn_model import Double_Trainer
 
 
 MAX_MEMORY = 10000
@@ -40,10 +41,17 @@ class Agent:
         self.dqn_model = Linear_QNet(11, 256, 3, self.device).to(self.device)
         self.dqn_trainer = QTrainer(self.dqn_model, self.lr, self.alpha, self.gamma, self.device)
 
-        # nature dqn
+        # advanced dqn
         self.qnet = Qnet(11, 256, 3, self.device).to(self.device)
-        self.target_qnt = target_Qnet(11, 256, 3, self.device).to(self.device)
-        self.n_trainer = NTrainer(self.qnet, self.target_qnt, self.lr, self.alpha, self.gamma, self.device)
+        self.target_qnet = target_Qnet(11, 256, 3, self.device).to(self.device)
+        # nature dqn
+        self.n_trainer = Nature_Trainer(self.qnet, self.target_qnet, self.lr, self.alpha, self.gamma, self.device)
+        # double dqn
+        self.do_trainer = Double_Trainer(self.qnet, self.target_qnet, self.lr, self.alpha, self.gamma, self.device)
+
+        # choose model and trainer
+        self.deep_model = self.dqn_model
+        self.deep_trainer = self.dqn_trainer
 
         # load model
         if load:
@@ -58,17 +66,17 @@ class Agent:
 
         states, actions, rewards, next_states, dones = zip(*mini_sample)
         if deep_flag:
-            self.n_trainer.train_step(states, actions, rewards, next_states, dones)
+            self.deep_trainer.train_step(states, actions, rewards, next_states, dones)
         else:
             self.Q = self.ql.ql_train(states, actions, rewards, next_states, dones, self.Q)
 
     def train_short_memory(self, state, action, reward, next_state, done, deep_flag):
         if deep_flag:
-            self.n_trainer.train_step(state, action, reward, next_state, done)
+            self.deep_trainer.train_step(state, action, reward, next_state, done)
         else:
             self.Q = self.ql.ql_train(state, action, reward, next_state, done, self.Q)
 
-    def get_action(self, state):
+    def dqn_get_action(self, state):
         final_move = [0, 0, 0]
         if self.n_games > 80:
             self.epsilon = 0
@@ -77,7 +85,7 @@ class Agent:
             final_move[move] = 1
         else:
             state0 = torch.tensor(state, dtype=torch.float)
-            prediction = self.dqn_model(state0)
+            prediction = self.deep_model(state0)
             move = torch.argmax(prediction).item()
             final_move[move] = 1
         return final_move

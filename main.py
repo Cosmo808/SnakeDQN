@@ -23,7 +23,7 @@ while True:
 
     # get move
     if deep_flag:
-        final_move = agent.get_action(state_old)
+        final_move = agent.dqn_get_action(state_old)
     else:
         final_move = agent.ql_get_action(state_old)
 
