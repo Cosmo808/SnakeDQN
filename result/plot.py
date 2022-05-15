@@ -10,7 +10,7 @@ plt.cla()
 
 
 # smooth func
-def smooth_curve(points, factor=0.93):
+def smooth_curve(points, factor=0.98):
     smoothed_points = []
     for point in points:
         if smoothed_points:

@@ -9,6 +9,7 @@ from ql_model import QLTrainer
 from dqn_model import Linear_QNet, QTrainer
 from nature_model import Qnet, target_Qnet, Nature_Trainer
 from double_dqn_model import Double_Trainer
+from dueling_dqn_model import Dueling_network, Dueling_Trainer
 
 
 MAX_MEMORY = 10000
@@ -22,7 +23,7 @@ class Agent:
         self.n_games = 0
         self.epsilon = 0.1
         self.alpha = 1.0
-        self.gamma = 0.7
+        self.gamma = 0.9
         self.lr = 0.001
         self.memory = deque(maxlen=MAX_MEMORY)
 
@@ -49,9 +50,13 @@ class Agent:
         # double dqn
         self.do_trainer = Double_Trainer(self.qnet, self.target_qnet, self.lr, self.alpha, self.gamma, self.device)
 
+        # dueling dqn
+        self.dueling_model = Dueling_network(11, 256, 3, self.device).to(self.device)
+        self.du_trainer = Dueling_Trainer(self.dueling_model, self.lr, self.alpha, self.gamma, self.device)
+
         # choose model and trainer
-        self.deep_model = self.dqn_model
-        self.deep_trainer = self.dqn_trainer
+        self.deep_model = self.dueling_model
+        self.deep_trainer = self.du_trainer
 
         # load model
         if load:
