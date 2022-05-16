@@ -6,6 +6,7 @@
 * Deep Q Learning
 * Nature DQN
 * Double DQN
+* Dueling DQN
 
 ## Requirements
 
@@ -29,7 +30,8 @@ run `main.py`
 
 * `ageng.py` agent of reinforcement learning
 * `double_dqn_model.py` algorithm of Double DQN
-* `dqn_mode.py` algorithm of DQN
+* `dqn_mode.py` algorithm of Vanilla DQN
+* `dueling_model.py` algorithm of Dueling DQN
 * `game.py` environment section of reinforcement learning
 * `main.py` run file
 * `nature_model.py` algorithm of Nature DQN
