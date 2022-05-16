@@ -27,20 +27,6 @@ class Qnet(nn.Module):
         torch.save(self.state_dict(), file_name)
 
 
-class target_Qnet(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size, device):
-        super(target_Qnet, self).__init__()
-        self.linear1 = nn.Linear(input_size, hidden_size)
-        self.linear2 = nn.Linear(hidden_size, output_size)
-        self.device = device
-
-    def forward(self, x):
-        x = x.to(self.device)
-        x = F.relu(self.linear1(x))
-        x = self.linear2(x)
-        return x
-
-
 class Nature_Trainer:
     def __init__(self, qnet, target_qnet, lr, alpha, gamma, device):
         self.lr = lr

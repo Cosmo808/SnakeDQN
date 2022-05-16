@@ -7,7 +7,7 @@ import os
 import numpy as np
 from ql_model import QLTrainer
 from dqn_model import Linear_QNet, QTrainer
-from nature_model import Qnet, target_Qnet, Nature_Trainer
+from nature_model import Qnet, Nature_Trainer
 from double_dqn_model import Double_Trainer
 from dueling_dqn_model import Dueling_network, Dueling_Trainer
 
@@ -22,7 +22,7 @@ class Agent:
         # hyper parameters
         self.n_games = 0
         self.epsilon = 0.1
-        self.alpha = 1.0
+        self.alpha = 0.2
         self.gamma = 0.9
         self.lr = 0.001
         self.memory = deque(maxlen=MAX_MEMORY)
@@ -44,7 +44,7 @@ class Agent:
 
         # advanced dqn
         self.qnet = Qnet(11, 256, 3, self.device).to(self.device)
-        self.target_qnet = target_Qnet(11, 256, 3, self.device).to(self.device)
+        self.target_qnet = Qnet(11, 256, 3, self.device).to(self.device)
         # nature dqn
         self.n_trainer = Nature_Trainer(self.qnet, self.target_qnet, self.lr, self.alpha, self.gamma, self.device)
         # double dqn

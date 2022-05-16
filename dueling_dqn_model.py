@@ -8,23 +8,20 @@ import torch.optim as optim
 class Dueling_network(nn.Module):
     def __init__(self, input_size, hidden_size, output_size, device):
         super(Dueling_network, self).__init__()
-        self.linear1 = nn.Linear(input_size, hidden_size // 2)
-        self.fc_value = nn.Linear(hidden_size // 2, hidden_size)
-        self.fc_adv = nn.Linear(hidden_size // 2, hidden_size)
-        self.value = nn.Linear(hidden_size, output_size)
+        self.fc_value = nn.Linear(input_size, hidden_size)
+        self.fc_adv = nn.Linear(input_size, hidden_size)
+        self.value = nn.Linear(hidden_size, 1)
         self.adv = nn.Linear(hidden_size, output_size)
         self.device = device
 
     def forward(self, x):
         x = x.to(self.device)
-        x = F.relu(self.linear1(x))
         value = F.relu(self.fc_value(x))
         adv = F.relu(self.fc_adv(x))
         value = self.value(value)
         adv = self.adv(adv)
 
-        advAverage = torch.mean(adv, dim=0, keepdim=True)
-        x = value + adv - advAverage
+        x = value + adv - adv.mean()
         return x
 
 
