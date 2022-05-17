@@ -37,10 +37,10 @@ class Double_Trainer:
         for idx in range(len(done)):
             Q_new = reward[idx]
             if not done[idx]:
-                a = torch.argmax(predict[idx]).item()
-                q = self.target_qnet(next_state[idx])
-                q = q[a]
-                Q_new = reward[idx] + self.gamma * q
+                q = self.qnet(next_state[idx])
+                q_target = self.target_qnet(next_state[idx])
+                a = torch.argmax(q)
+                Q_new = reward[idx] + self.gamma * q_target[a]
             Q_old = target[idx][torch.argmax(action[idx]).item()]
             target[idx][torch.argmax(action[idx]).item()] = Q_old + self.alpha * (Q_new - Q_old)
 

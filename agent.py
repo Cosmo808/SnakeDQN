@@ -22,7 +22,7 @@ class Agent:
         # hyper parameters
         self.n_games = 0
         self.epsilon = 0.1
-        self.alpha = 0.2
+        self.alpha = 1.0
         self.gamma = 0.9
         self.lr = 0.001
         self.memory = deque(maxlen=MAX_MEMORY)
@@ -42,9 +42,10 @@ class Agent:
         self.dqn_model = Linear_QNet(11, 256, 3, self.device).to(self.device)
         self.dqn_trainer = QTrainer(self.dqn_model, self.lr, self.alpha, self.gamma, self.device)
 
-        # advanced dqn
+        # double networks
         self.qnet = Qnet(11, 256, 3, self.device).to(self.device)
         self.target_qnet = Qnet(11, 256, 3, self.device).to(self.device)
+        self.target_qnet.load_state_dict(self.qnet.state_dict())
         # nature dqn
         self.n_trainer = Nature_Trainer(self.qnet, self.target_qnet, self.lr, self.alpha, self.gamma, self.device)
         # double dqn
@@ -55,8 +56,8 @@ class Agent:
         self.du_trainer = Dueling_Trainer(self.dueling_model, self.lr, self.alpha, self.gamma, self.device)
 
         # choose model and trainer
-        self.deep_model = self.dueling_model
-        self.deep_trainer = self.du_trainer
+        self.deep_model = self.qnet
+        self.deep_trainer = self.do_trainer
 
         # load model
         if load:
