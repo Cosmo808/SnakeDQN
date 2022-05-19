@@ -112,4 +112,4 @@ def var_plot(director):
 
 
 if __name__ == '__main__':
-    var_plot('./dqn')
+    var_plot('./algorithms')

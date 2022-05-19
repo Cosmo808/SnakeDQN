@@ -28,7 +28,7 @@ class Agent:
         self.memory = deque(maxlen=MAX_MEMORY)
 
         # cuda or cpu
-        self.device = torch.device("cpu" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         if torch.cuda.is_available():
             print('\nGPU Accelerating...\n')
         else:
@@ -56,8 +56,8 @@ class Agent:
         self.du_trainer = Dueling_Trainer(self.dueling_model, self.lr, self.alpha, self.gamma, self.device)
 
         # choose model and trainer
-        self.deep_model = self.qnet
-        self.deep_trainer = self.do_trainer
+        self.deep_model = self.dueling_model
+        self.deep_trainer = self.du_trainer
 
         # load model
         if load:
