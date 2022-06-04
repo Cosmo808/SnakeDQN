@@ -4,14 +4,17 @@ import time
 from game import SnakeGameAI
 from agent import Agent
 import numpy as np
+from icp_serial import icpReader
 
 
 deep_flag = True
 load_flag = False
+practice_flag = True
 plot_scores = []
 plot_mean_scores = []
 total_score = 0
 record = 0
+icp_reader = icpReader()
 agent = Agent(load_flag)
 game = SnakeGameAI()
 plt.ion()
@@ -22,10 +25,16 @@ while True:
     state_old = agent.get_state(game)
 
     # get move
-    if deep_flag:
-        final_move = agent.dqn_get_action(state_old)
-    else:
-        final_move = agent.ql_get_action(state_old)
+    # if deep_flag:
+    #     final_move = agent.dqn_get_action(state_old)
+    # else:
+    #     final_move = agent.ql_get_action(state_old)
+
+    # get actual move
+    speed = icp_reader.read_speed()
+    vector = icp_reader.speed2vector(speed)
+    final_move = icp_reader.vector2action(vector)
+    print(speed, vector)
 
     # perform move and get new state
     reward, done, score = game.play_step(final_move)
