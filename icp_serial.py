@@ -56,18 +56,21 @@ class icpReader:
 
     @staticmethod
     def vector2action(vector):
+        go = False
         radius = vector[0]
         theta = vector[1]
         if theta > 180:
             theta -= 360
-        if -60 <= theta < 60:
+        if -30 <= theta < 30:
             action = [1, 0, 0]
-        elif 60 <= theta < 180:
+        elif 30 <= theta < 180:
             action = [0, 1, 0]
         else:
             action = [0, 0, 1]
         # [straight, right, left]
-        return action
+        if radius >= 30:
+            go = True
+        return action, go
 
     def __del__(self):
         self.ser.close()

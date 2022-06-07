@@ -31,10 +31,12 @@ while True:
     #     final_move = agent.ql_get_action(state_old)
 
     # get actual move
-    speed = icp_reader.read_speed()
-    vector = icp_reader.speed2vector(speed)
-    final_move = icp_reader.vector2action(vector)
-    print(speed, vector)
+    while True:
+        speed = icp_reader.read_speed()
+        vector = icp_reader.speed2vector(speed)
+        final_move, go = icp_reader.vector2action(vector)
+        if go:
+            break
 
     # perform move and get new state
     reward, done, score = game.play_step(final_move)
