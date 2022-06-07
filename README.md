@@ -33,6 +33,7 @@ run `main.py`
 * `dqn_mode.py` algorithm of Vanilla DQN
 * `dueling_model.py` algorithm of Dueling DQN
 * `game.py` environment section of reinforcement learning
+* `icp_serial.py` receive and process data from serial
 * `main.py` run file
 * `nature_model.py` algorithm of Nature DQN
 * `ql_model.py` algorithm of Q Learning
